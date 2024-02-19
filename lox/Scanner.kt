@@ -155,7 +155,7 @@ class Scanner(
   }
 
   private fun isDigit(c: Char): Boolean {
-    return c in '0'..'0'
+    return c in '0'..'9'
   } 
 
   private fun isAtEnd(): Boolean {
