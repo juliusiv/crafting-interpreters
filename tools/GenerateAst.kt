@@ -31,14 +31,31 @@ private fun defineAst(outputDir: String, baseName: String, types: List<String>) 
   writer.println();
   writer.println("abstract class " + baseName + " {");
 
+  defineVisitor(writer, baseName, types);
+
   for (type in types) {
     val className = type.split(":")[0].trim();
     val fields = type.split(":")[1].trim(); 
     defineType(writer, baseName, className, fields);
   }
 
+  // The base accept() method.
+  writer.println();
+  writer.println("  abstract <R> R accept(Visitor<R> visitor);");
+
   writer.println("}");
   writer.close();
+}
+
+fun defineVisitor(writer: PrintWriter, baseName: String, types: List<String>) {
+  writer.println("  interface Visitor<R> {");
+
+  for (type in types) {
+    val typeName = type.split(":")[0].trim();
+    writer.println("    R visit" + typeName + baseName + "(" + typeName + " " + baseName.lowercase() + ");");
+  }
+
+  writer.println("  }");
 }
 
 fun defineType(writer: PrintWriter, baseName: String, className: String, fieldList: String) {
@@ -54,6 +71,13 @@ fun defineType(writer: PrintWriter, baseName: String, className: String, fieldLi
     writer.println("      this." + name + " = " + name + ";");
   }
 
+  writer.println("    }");
+
+  // Visitor pattern.
+  writer.println();
+  writer.println("    @Override");
+  writer.println("    <R> R accept(Visitor<R> visitor) {");
+  writer.println("      return visitor.visit" + className + baseName + "(this);");
   writer.println("    }");
 
   // Fields.
