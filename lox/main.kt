@@ -6,19 +6,35 @@ import java.nio.file.Files
 import java.nio.charset.Charset
 import java.io.InputStreamReader
 import java.io.BufferedReader
-// import com.craftinginterpreters.lox.Scanner
 
 var hadError = false
 
 fun main(args: Array<String>) {
-    if (args.size > 1) {
-      System.out.println("Usage: jlox [script]");
-      System.exit(64); 
-    } else if (args.size == 1) {
-      runFile(args[0]);
-    } else {
-      runPrompt();
-    }
+  // printAst()
+
+  if (args.size > 1) {
+    System.out.println("Usage: jlox [script]");
+    System.exit(64); 
+  } else if (args.size == 1) {
+    runFile(args[0]);
+  } else {
+    runPrompt();
+  }
+}
+
+fun printAst() {
+  val expression = Binary(
+    Unary(
+      Token(TokenType.MINUS, "-", null, 1),
+      Literal(123)
+    ),
+    Token(TokenType.STAR, "*", null, 1),
+    Grouping(
+      Literal(45.67)
+    )
+  );
+
+  System.out.println(AstPrinter().print(expression));
 }
 
 @Throws(IOException::class)

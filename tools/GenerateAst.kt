@@ -13,10 +13,10 @@ fun main(args: Array<String>) {
   val outputDir = args[0];
 
   defineAst(outputDir, "Expr", Arrays.asList(
-    "Binary   : Expr left, Token operator, Expr right",
-    "Grouping : Expr expression",
-    "Literal  : Object value",
-    "Unary    : Token operator, Expr right"
+    "Binary   : left: Expr, operator: Token, right: Expr",
+    "Grouping : expression: Expr",
+    "Literal  : value: Any?",
+    "Unary    : operator: Token, right: Expr"
   ));
 }
 
@@ -27,64 +27,47 @@ private fun defineAst(outputDir: String, baseName: String, types: List<String>) 
 
   writer.println("package com.craftinginterpreters.lox;");
   writer.println();
-  writer.println("import java.util.List;");
+  writer.println("import kotlin.collections.List;");
   writer.println();
-  writer.println("abstract class " + baseName + " {");
 
   defineVisitor(writer, baseName, types);
+  writer.println();
+  
+  // Base interface
+  writer.println("interface " + baseName + " {");
+  writer.println("  fun <R> accept(visitor: Visitor<R>): R;");
+  writer.println("}");
+  writer.println();
 
   for (type in types) {
     val className = type.split(":")[0].trim();
-    val fields = type.split(":")[1].trim(); 
+    val fields = type.split(":", limit = 2)[1].trim(); 
     defineType(writer, baseName, className, fields);
+    writer.println();
   }
 
-  // The base accept() method.
-  writer.println();
-  writer.println("  abstract <R> R accept(Visitor<R> visitor);");
-
-  writer.println("}");
   writer.close();
 }
 
 fun defineVisitor(writer: PrintWriter, baseName: String, types: List<String>) {
-  writer.println("  interface Visitor<R> {");
+  writer.println("interface Visitor<out R> {");
 
   for (type in types) {
     val typeName = type.split(":")[0].trim();
-    writer.println("    R visit" + typeName + baseName + "(" + typeName + " " + baseName.lowercase() + ");");
+    writer.println("  fun visit" + typeName + baseName + "(" + baseName.lowercase() + ": " + typeName + "): R;");
   }
 
-  writer.println("  }");
+  writer.println("}");
 }
 
 fun defineType(writer: PrintWriter, baseName: String, className: String, fieldList: String) {
-  writer.println("  static class " + className + " extends " + baseName + " {");
-
-  // Constructor.
-  writer.println("    " + className + "(" + fieldList + ") {");
-
-  // Store parameters in fields.
-  val fields = fieldList.split(", ");
-  for (field in fields) {
-    val name = field.split(" ")[1];
-    writer.println("      this." + name + " = " + name + ";");
-  }
-
-  writer.println("    }");
+  val vals = fieldList.split(",").joinToString(", val ", prefix = "val ");
+  writer.println("class " + className + "(" + vals + ")" + " : " + baseName + " {");
 
   // Visitor pattern.
-  writer.println();
-  writer.println("    @Override");
-  writer.println("    <R> R accept(Visitor<R> visitor) {");
-  writer.println("      return visitor.visit" + className + baseName + "(this);");
-  writer.println("    }");
-
-  // Fields.
-  writer.println();
-  for (field in fields) {
-    writer.println("    final " + field + ";");
-  }
-
+  writer.println("  override fun <R> accept(visitor: Visitor<R>): R {");
+  writer.println("    return visitor.visit" + className + baseName + "(this);");
   writer.println("  }");
+
+  writer.println("}");
 }

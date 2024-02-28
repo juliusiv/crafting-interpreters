@@ -1,68 +1,39 @@
 package com.craftinginterpreters.lox;
 
-import java.util.List;
+import kotlin.collections.List;
 
-abstract class Expr {
-  interface Visitor<R> {
-    R visitBinaryExpr(Binary expr);
-    R visitGroupingExpr(Grouping expr);
-    R visitLiteralExpr(Literal expr);
-    R visitUnaryExpr(Unary expr);
-  }
-  static class Binary extends Expr {
-    Binary(Expr left, Token operator, Expr right) {
-      this.left = left;
-      this.operator = operator;
-      this.right = right;
-    }
-
-    @Override
-    <R> R accept(Visitor<R> visitor) {
-      return visitor.visitBinaryExpr(this);
-    }
-
-    final Expr left;
-    final Token operator;
-    final Expr right;
-  }
-  static class Grouping extends Expr {
-    Grouping(Expr expression) {
-      this.expression = expression;
-    }
-
-    @Override
-    <R> R accept(Visitor<R> visitor) {
-      return visitor.visitGroupingExpr(this);
-    }
-
-    final Expr expression;
-  }
-  static class Literal extends Expr {
-    Literal(Object value) {
-      this.value = value;
-    }
-
-    @Override
-    <R> R accept(Visitor<R> visitor) {
-      return visitor.visitLiteralExpr(this);
-    }
-
-    final Object value;
-  }
-  static class Unary extends Expr {
-    Unary(Token operator, Expr right) {
-      this.operator = operator;
-      this.right = right;
-    }
-
-    @Override
-    <R> R accept(Visitor<R> visitor) {
-      return visitor.visitUnaryExpr(this);
-    }
-
-    final Token operator;
-    final Expr right;
-  }
-
-  abstract <R> R accept(Visitor<R> visitor);
+interface Visitor<out R> {
+  fun visitBinaryExpr(expr: Binary): R;
+  fun visitGroupingExpr(expr: Grouping): R;
+  fun visitLiteralExpr(expr: Literal): R;
+  fun visitUnaryExpr(expr: Unary): R;
 }
+
+interface Expr {
+  fun <R> accept(visitor: Visitor<R>): R;
+}
+
+class Binary(val left: Expr, val  operator: Token, val  right: Expr) : Expr {
+  override fun <R> accept(visitor: Visitor<R>): R {
+    return visitor.visitBinaryExpr(this);
+  }
+}
+
+class Grouping(val expression: Expr) : Expr {
+  override fun <R> accept(visitor: Visitor<R>): R {
+    return visitor.visitGroupingExpr(this);
+  }
+}
+
+class Literal(val value: Any?) : Expr {
+  override fun <R> accept(visitor: Visitor<R>): R {
+    return visitor.visitLiteralExpr(this);
+  }
+}
+
+class Unary(val operator: Token, val  right: Expr) : Expr {
+  override fun <R> accept(visitor: Visitor<R>): R {
+    return visitor.visitUnaryExpr(this);
+  }
+}
+
