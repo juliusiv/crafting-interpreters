@@ -18,6 +18,11 @@ fun main(args: Array<String>) {
     "Literal  : value: Any?",
     "Unary    : operator: Token, right: Expr"
   ));
+
+  defineAst(outputDir, "Stmt", Arrays.asList(
+    "Expression : expression: Expr",
+    "Print      : expression: Expr"
+  ));
 }
 
 @Throws(IOException::class)
