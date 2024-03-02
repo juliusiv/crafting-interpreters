@@ -11,4 +11,8 @@ make run filename.lox
 
 # Run the prompt
 make run-prompt
+
+# To regenerate the Expr.kt file
+# From ./lox, run
+make generate-ast
 ```

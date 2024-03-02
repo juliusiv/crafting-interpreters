@@ -36,7 +36,6 @@ private fun defineAst(outputDir: String, baseName: String, types: List<String>) 
   // Base interface
   writer.println("interface " + baseName + " {");
   writer.println("  fun <R> accept(visitor: Visitor<R>): R;");
-  writer.println("}");
   writer.println();
 
   for (type in types) {
@@ -46,6 +45,9 @@ private fun defineAst(outputDir: String, baseName: String, types: List<String>) 
     writer.println();
   }
 
+  writer.println("}");
+  writer.println();
+
   writer.close();
 }
 
@@ -54,7 +56,7 @@ fun defineVisitor(writer: PrintWriter, baseName: String, types: List<String>) {
 
   for (type in types) {
     val typeName = type.split(":")[0].trim();
-    writer.println("  fun visit" + typeName + baseName + "(" + baseName.lowercase() + ": " + typeName + "): R;");
+    writer.println("  fun visit" + typeName + baseName + "(" + baseName.lowercase() + ": " + baseName + "." + typeName + "): R;");
   }
 
   writer.println("}");
@@ -62,12 +64,12 @@ fun defineVisitor(writer: PrintWriter, baseName: String, types: List<String>) {
 
 fun defineType(writer: PrintWriter, baseName: String, className: String, fieldList: String) {
   val vals = fieldList.split(",").joinToString(", val ", prefix = "val ");
-  writer.println("class " + className + "(" + vals + ")" + " : " + baseName + " {");
+  writer.println("  class " + className + "(" + vals + ")" + " : " + baseName + " {");
 
   // Visitor pattern.
-  writer.println("  override fun <R> accept(visitor: Visitor<R>): R {");
-  writer.println("    return visitor.visit" + className + baseName + "(this);");
-  writer.println("  }");
+  writer.println("    override fun <R> accept(visitor: Visitor<R>): R {");
+  writer.println("      return visitor.visit" + className + baseName + "(this);");
+  writer.println("    }");
 
-  writer.println("}");
+  writer.println("  }");
 }
