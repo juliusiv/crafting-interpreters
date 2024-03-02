@@ -7,7 +7,8 @@ import java.nio.charset.Charset
 import java.io.InputStreamReader
 import java.io.BufferedReader
 
-var hadError = false
+var hadError = false;
+var hadRuntimeError = false;
 
 fun main(args: Array<String>) {
   // printAst()
@@ -42,7 +43,8 @@ fun runFile(path: String) {
   val bytes = Files.readAllBytes(Paths.get(path));
   run(String(bytes, Charset.defaultCharset()));
 
-  if (hadError) System.exit(65)
+  if (hadError) System.exit(65);
+  if (hadRuntimeError) System.exit(70);
 }
 
 @Throws(IOException::class)
@@ -74,17 +76,19 @@ fun run(source: String) {
     return;
   }
 
+  
   if (expression == null) {
     System.out.println("Issue parsing expression!");
     return;
   }
 
-  System.out.println(AstPrinter().print(expression));
+  val interpreter = Interpreter();
+  interpreter.interpret(expression);
 
-  // For now, just print the tokens.
-  for (token in tokens) {
-    System.out.println(token.toString());
-  }
+  // System.out.println(AstPrinter().print(expression) + "\n");
+  // for (token in tokens) {
+  //   System.out.println(token.toString());
+  // }
 }
 
 fun error(line: Int, message: String) {
@@ -96,22 +100,16 @@ private fun report(line: Int, where: String, message: String) {
   hadError = true;
 }
 
-class Lox {
-  companion object {
-    fun error(token: Token, message: String) {
-      if (token.type == TokenType.EOF) {
-        report(token.line, " at end", message);
-      } else {
-        report(token.line, " at '" + token.lexeme + "'", message);
-      }
-    }
-  }
-}
-
 fun loxError(token: Token, message: String) {
   if (token.type == TokenType.EOF) {
     report(token.line, " at end", message);
   } else {
     report(token.line, " at '" + token.lexeme + "'", message);
   }
+}
+
+fun loxRuntimeError(error: RuntimeError) {
+  System.err.println(error.message +
+      "\n[line " + error.token.line + "]");
+  hadRuntimeError = true;
 }
