@@ -68,7 +68,7 @@ fun run(source: String) {
   val tokens = scanner.scanTokens();
 
   val parser = Parser(tokens);
-  val expression = parser.parse();
+  val statements = parser.parse();
 
   // Stop if there was a syntax error.
   if (hadError) {
@@ -76,14 +76,8 @@ fun run(source: String) {
     return;
   }
 
-  
-  if (expression == null) {
-    System.out.println("Issue parsing expression!");
-    return;
-  }
-
   val interpreter = Interpreter();
-  interpreter.interpret(expression);
+  interpreter.interpret(statements);
 
   // System.out.println(AstPrinter().print(expression) + "\n");
   // for (token in tokens) {

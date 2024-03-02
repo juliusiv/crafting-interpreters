@@ -3,20 +3,23 @@ package com.craftinginterpreters.lox;
 import kotlin.collections.List;
 
 import com.craftinginterpreters.lox.TokenType.*;
-// import com.craftinginterpreters.lox.Lox;
 
 /**
  * Expression Grammar
- * 
- * expression    → equality ;
- * equality      → comparison ( ( "!=" | "==" ) comparison )* ;
- * comparison    → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
- * term          → factor ( ( "-" | "+" ) factor )* ;
- * factor        → unary ( ( "/" | "*" ) unary )* ;
- * unary         → ( "!" | "-" ) unary
- *               | primary ;
- * primary       → NUMBER | STRING | "true" | "false" | "nil"
- *               | "(" expression ")" ;
+   program       → statement* EOF ;
+   statement     → exprStmt
+                 | printStmt ;
+   exprStmt      → expression ";" ;
+   printStmt     → "print" expression ";" ;
+   expression    → equality ;
+   equality      → comparison ( ( "!=" | "==" ) comparison )* ;
+   comparison    → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+   term          → factor ( ( "-" | "+" ) factor )* ;
+   factor        → unary ( ( "/" | "*" ) unary )* ;
+   unary         → ( "!" | "-" ) unary
+                 | primary ;
+   primary       → NUMBER | STRING | "true" | "false" | "nil"
+                 | "(" expression ")" ;
  */
 
 class Parser(val tokens: List<Token>) {
@@ -24,16 +27,35 @@ class Parser(val tokens: List<Token>) {
 
   var current = 0;
 
-  fun parse(): Expr? {
-    try {
-      return expression();
-    } catch (error: ParseError) {
-      return null;
+  fun parse(): List<Stmt> {
+    val statements: MutableList<Stmt> = ArrayList<Stmt>();
+    while (!isAtEnd()) {
+      statements.add(statement());
     }
+
+    return statements.toList();
   }
 
   private fun expression(): Expr {
     return equality();
+  }
+
+  private fun statement(): Stmt {
+    if (match(PRINT)) return printStatement();
+
+    return expressionStatement();
+  }
+
+  private fun printStatement(): Stmt {
+    val value = expression();
+    consume(SEMICOLON, "Expect ';' after value.");
+    return Stmt.Print(value);
+  }
+
+  private fun expressionStatement(): Stmt {
+    val expr = expression();
+    consume(SEMICOLON, "Expect ';' after expression.");
+    return Stmt.Expression(expr);
   }
 
   private fun equality(): Expr {

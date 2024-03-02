@@ -3,13 +3,14 @@ package com.craftinginterpreters.lox;
 import com.craftinginterpreters.lox.TokenType.*;
 import com.craftinginterpreters.lox.RuntimeError
 
-class Interpreter : Visitor<Any?> {
-  fun interpret(expression: Expr) { 
+class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
+  fun interpret(statements: List<Stmt>) {
     try {
-      val value = evaluate(expression);
-      System.out.println(stringify(value));
-    } catch (err: RuntimeError) {
-      loxRuntimeError(err);
+      for (statement in statements) {
+        execute(statement);
+      }
+    } catch (error: RuntimeError) {
+      loxRuntimeError(error);
     }
   }
 
@@ -55,6 +56,21 @@ class Interpreter : Visitor<Any?> {
 
   private fun evaluate(expr: Expr): Any? {
     return expr.accept(this);
+  }
+
+  private fun execute(stmt: Stmt) {
+    stmt.accept(this);
+  }
+
+  override fun visitExpressionStmt(stmt: Stmt.Expression): Unit {
+    evaluate(stmt.expression);
+    return Unit;
+  }
+
+  override fun visitPrintStmt(stmt: Stmt.Print): Unit {
+    val value = evaluate(stmt.expression);
+    System.out.println(stringify(value));
+    return Unit;
   }
 
   override fun visitBinaryExpr(expr: Expr.Binary): Any? {

@@ -35,11 +35,13 @@ private fun defineAst(outputDir: String, baseName: String, types: List<String>) 
   writer.println("import kotlin.collections.List;");
   writer.println();
 
-  defineVisitor(writer, baseName, types);
-  writer.println();
   
   // Base interface
   writer.println("interface " + baseName + " {");
+
+  defineVisitor(writer, baseName, types);
+  writer.println();
+
   writer.println("  fun <R> accept(visitor: Visitor<R>): R;");
   writer.println();
 
@@ -57,14 +59,14 @@ private fun defineAst(outputDir: String, baseName: String, types: List<String>) 
 }
 
 fun defineVisitor(writer: PrintWriter, baseName: String, types: List<String>) {
-  writer.println("interface Visitor<out R> {");
+  writer.println("  interface Visitor<out R> {");
 
   for (type in types) {
     val typeName = type.split(":")[0].trim();
-    writer.println("  fun visit" + typeName + baseName + "(" + baseName.lowercase() + ": " + baseName + "." + typeName + "): R;");
+    writer.println("    fun visit" + typeName + baseName + "(" + baseName.lowercase() + ": " + baseName + "." + typeName + "): R;");
   }
 
-  writer.println("}");
+  writer.println("  }");
 }
 
 fun defineType(writer: PrintWriter, baseName: String, className: String, fieldList: String) {
