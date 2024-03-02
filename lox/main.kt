@@ -23,14 +23,14 @@ fun main(args: Array<String>) {
 }
 
 fun printAst() {
-  val expression = Binary(
-    Unary(
+  val expression = Expr.Binary(
+    Expr.Unary(
       Token(TokenType.MINUS, "-", null, 1),
-      Literal(123)
+      Expr.Literal(123)
     ),
     Token(TokenType.STAR, "*", null, 1),
-    Grouping(
-      Literal(45.67)
+    Expr.Grouping(
+      Expr.Literal(45.67)
     )
   );
 
@@ -65,6 +65,22 @@ fun run(source: String) {
   val scanner = com.craftinginterpreters.lox.Scanner(source);
   val tokens = scanner.scanTokens();
 
+  val parser = Parser(tokens);
+  val expression = parser.parse();
+
+  // Stop if there was a syntax error.
+  if (hadError) {
+    System.out.println("Syntax error!");
+    return;
+  }
+
+  if (expression == null) {
+    System.out.println("Issue parsing expression!");
+    return;
+  }
+
+  System.out.println(AstPrinter().print(expression));
+
   // For now, just print the tokens.
   for (token in tokens) {
     System.out.println(token.toString());
@@ -78,4 +94,24 @@ fun error(line: Int, message: String) {
 private fun report(line: Int, where: String, message: String) {
   System.err.println("[line " + line + "] Error" + where + ": " + message);
   hadError = true;
+}
+
+class Lox {
+  companion object {
+    fun error(token: Token, message: String) {
+      if (token.type == TokenType.EOF) {
+        report(token.line, " at end", message);
+      } else {
+        report(token.line, " at '" + token.lexeme + "'", message);
+      }
+    }
+  }
+}
+
+fun loxError(token: Token, message: String) {
+  if (token.type == TokenType.EOF) {
+    report(token.line, " at end", message);
+  } else {
+    report(token.line, " at '" + token.lexeme + "'", message);
+  }
 }

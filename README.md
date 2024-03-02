@@ -6,9 +6,9 @@ My code for [_Crafting Interpreters_](https://craftinginterpreters.com/). I'm us
 brew update
 brew install kotlin
 
-# Compile the thing
-kotlinc *.kt -include-runtime -d main.jar
+# Run a file
+make run filename.lox
 
-# Run the thing
-java -jar main.jar
+# Run the prompt
+make run-prompt
 ```
