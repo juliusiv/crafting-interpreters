@@ -4,6 +4,8 @@ import com.craftinginterpreters.lox.TokenType.*;
 import com.craftinginterpreters.lox.RuntimeError
 
 class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
+  private var environment = Environment();
+
   fun interpret(statements: List<Stmt>) {
     try {
       for (statement in statements) {
@@ -29,6 +31,10 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
       }
       else -> right; // is this right?
     }
+  }
+
+  override fun visitVariableExpr(expr: Expr.Variable): Any? {
+    return environment.get(expr.name);
   }
 
   private fun checkNumberOperand(operator: Token, operand: Any?) {
@@ -62,6 +68,24 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     stmt.accept(this);
   }
 
+  fun executeBlock(statements: List<Stmt>, environment: Environment) {
+    val previous = this.environment;
+    try {
+      this.environment = environment;
+
+      for (statement in statements) {
+        execute(statement);
+      }
+    } finally {
+      this.environment = previous;
+    }
+  }
+
+  override fun visitBlockStmt(stmt: Stmt.Block): Unit {
+    executeBlock(stmt.statements, Environment(environment));
+    return Unit;
+  }
+
   override fun visitExpressionStmt(stmt: Stmt.Expression): Unit {
     evaluate(stmt.expression);
     return Unit;
@@ -71,6 +95,22 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     val value = evaluate(stmt.expression);
     System.out.println(stringify(value));
     return Unit;
+  }
+
+  override fun visitVarStmt(stmt: Stmt.Var): Unit {
+    var value: Any? = null;
+    if (stmt.initializer != null) {
+      value = evaluate(stmt.initializer);
+    }
+
+    environment.define(stmt.name.lexeme, value);
+    // return null;
+  }
+
+  override fun visitAssignExpr(expr: Expr.Assign): Any? {
+    val value = evaluate(expr.value);
+    environment.assign(expr.name, value);
+    return value;
   }
 
   override fun visitBinaryExpr(expr: Expr.Binary): Any? {

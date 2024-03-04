@@ -6,20 +6,30 @@ import com.craftinginterpreters.lox.TokenType.*;
 
 /**
  * Expression Grammar
-   program       → statement* EOF ;
-   statement     → exprStmt
-                 | printStmt ;
-   exprStmt      → expression ";" ;
-   printStmt     → "print" expression ";" ;
-   expression    → equality ;
-   equality      → comparison ( ( "!=" | "==" ) comparison )* ;
-   comparison    → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-   term          → factor ( ( "-" | "+" ) factor )* ;
-   factor        → unary ( ( "/" | "*" ) unary )* ;
-   unary         → ( "!" | "-" ) unary
-                 | primary ;
-   primary       → NUMBER | STRING | "true" | "false" | "nil"
-                 | "(" expression ")" ;
+   program        → declaration* EOF ;
+   declaration    → varDecl
+                  | statement ;
+   varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+   statement      → exprStmt
+                  | printStmt ;
+   exprStmt       → expression ";" ;
+   printStmt      → "print" expression ";" ;
+   statement      → exprStmt
+                  | printStmt
+                  | block ;
+   block          → "{" declaration* "}" ;
+   expression     → assignment ;
+   assignment     → IDENTIFIER "=" assignment
+                  | equality ;
+   equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+   comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+   term           → factor ( ( "-" | "+" ) factor )* ;
+   factor         → unary ( ( "/" | "*" ) unary )* ;
+   unary          → ( "!" | "-" ) unary
+                  | primary ;
+   primary        → NUMBER | STRING | "true" | "false" | "nil"
+                  | "(" expression ")"
+                  | IDENTIFIER ;
  */
 
 class Parser(val tokens: List<Token>) {
@@ -30,18 +40,34 @@ class Parser(val tokens: List<Token>) {
   fun parse(): List<Stmt> {
     val statements: MutableList<Stmt> = ArrayList<Stmt>();
     while (!isAtEnd()) {
-      statements.add(statement());
+      statements.add(declaration());
     }
 
     return statements.toList();
   }
 
   private fun expression(): Expr {
-    return equality();
+    return assignment();
+  }
+
+  private fun declaration(): Stmt {
+    if (match(VAR)) return varDeclaration();
+    return statement();
+    // TODO: the null return seems weird... instead of doing Stmt? everywhere, let's see if this gets addressed
+    // try {
+    //   if (match(VAR)) return varDeclaration();
+
+    //   return statement();
+    // } catch (ParseError error) {
+    //   synchronize();
+
+    //   return null;
+    // }
   }
 
   private fun statement(): Stmt {
     if (match(PRINT)) return printStatement();
+    if (match(LEFT_BRACE)) return Stmt.Block(block());
 
     return expressionStatement();
   }
@@ -52,10 +78,51 @@ class Parser(val tokens: List<Token>) {
     return Stmt.Print(value);
   }
 
+  private fun varDeclaration(): Stmt {
+    val name = consume(IDENTIFIER, "Expect variable name.");
+
+    var initializer: Expr? = null;
+    if (match(EQUAL)) {
+      initializer = expression();
+    }
+
+    consume(SEMICOLON, "Expect ';' after variable declaration.");
+    return Stmt.Var(name, initializer);
+  }
+
   private fun expressionStatement(): Stmt {
     val expr = expression();
     consume(SEMICOLON, "Expect ';' after expression.");
     return Stmt.Expression(expr);
+  }
+
+  private fun block(): List<Stmt> {
+    val statements = mutableListOf<Stmt>();
+
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      statements.add(declaration());
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after block.");
+    return statements;
+  }
+
+  private fun assignment(): Expr {
+    val expr = equality();
+
+    if (match(EQUAL)) {
+      val equals = previous();
+      val value = assignment();
+
+      if (expr is Expr.Variable) {
+        val name = expr.name;
+        return Expr.Assign(name, value);
+      }
+
+      error(equals, "Invalid assignment target."); 
+    }
+
+    return expr;
   }
 
   private fun equality(): Expr {
@@ -124,6 +191,10 @@ class Parser(val tokens: List<Token>) {
 
     if (match(NUMBER, STRING)) {
       return Expr.Literal(previous().literal);
+    }
+
+    if (match(IDENTIFIER)) {
+      return Expr.Variable(previous());
     }
 
     if (match(LEFT_PAREN)) {

@@ -13,15 +13,19 @@ fun main(args: Array<String>) {
   val outputDir = args[0];
 
   defineAst(outputDir, "Expr", Arrays.asList(
+    "Assign   : name: Token, value: Expr",
     "Binary   : left: Expr, operator: Token, right: Expr",
     "Grouping : expression: Expr",
     "Literal  : value: Any?",
-    "Unary    : operator: Token, right: Expr"
+    "Unary    : operator: Token, right: Expr",
+    "Variable : name: Token"
   ));
 
   defineAst(outputDir, "Stmt", Arrays.asList(
+    "Block      : statements: List<Stmt>",
     "Expression : expression: Expr",
-    "Print      : expression: Expr"
+    "Print      : expression: Expr",
+    "Var        : name: Token, initializer: Expr?"
   ));
 }
 
