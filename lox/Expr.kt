@@ -8,6 +8,7 @@ interface Expr {
     fun visitBinaryExpr(expr: Expr.Binary): R;
     fun visitGroupingExpr(expr: Expr.Grouping): R;
     fun visitLiteralExpr(expr: Expr.Literal): R;
+    fun visitLogicalExpr(expr: Expr.Logical): R;
     fun visitUnaryExpr(expr: Expr.Unary): R;
     fun visitVariableExpr(expr: Expr.Variable): R;
   }
@@ -35,6 +36,12 @@ interface Expr {
   class Literal(val value: Any?) : Expr {
     override fun <R> accept(visitor: Visitor<R>): R {
       return visitor.visitLiteralExpr(this);
+    }
+  }
+
+  class Logical(val left: Expr, val  operator: Token, val  right: Expr) : Expr {
+    override fun <R> accept(visitor: Visitor<R>): R {
+      return visitor.visitLogicalExpr(this);
     }
   }
 

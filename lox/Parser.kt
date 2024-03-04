@@ -3,6 +3,7 @@ package com.craftinginterpreters.lox;
 import kotlin.collections.List;
 
 import com.craftinginterpreters.lox.TokenType.*;
+import java.util.Arrays
 
 /**
  * Expression Grammar
@@ -15,12 +16,22 @@ import com.craftinginterpreters.lox.TokenType.*;
    exprStmt       → expression ";" ;
    printStmt      → "print" expression ";" ;
    statement      → exprStmt
+                  | forStmt
+                  | ifStmt
                   | printStmt
+                  | whileStmt
                   | block ;
+   forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
+                    expression? ";"
+                    expression? ")" statement ;
+   whileStmt      → "while" "(" expression ")" statement ;
+   ifStmt         → "if" "(" expression ")" statement ( "else" statement )? ;
    block          → "{" declaration* "}" ;
    expression     → assignment ;
    assignment     → IDENTIFIER "=" assignment
-                  | equality ;
+                  | logic_or ;
+   logic_or       → logic_and ( "or" logic_and )* ;
+   logic_and      → equality ( "and" equality )* ;  
    equality       → comparison ( ( "!=" | "==" ) comparison )* ;
    comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
    term           → factor ( ( "-" | "+" ) factor )* ;
@@ -66,10 +77,69 @@ class Parser(val tokens: List<Token>) {
   }
 
   private fun statement(): Stmt {
+    if (match(FOR)) return forStatement();
+    if (match(IF)) return ifStatement();
     if (match(PRINT)) return printStatement();
+    if (match(WHILE)) return whileStatement();
     if (match(LEFT_BRACE)) return Stmt.Block(block());
 
     return expressionStatement();
+  }
+
+  private fun forStatement(): Stmt {
+    consume(LEFT_PAREN, "Expect '(' after 'for'.");
+
+    val initializer = if (match(SEMICOLON)) {
+      null;
+    } else if (match(VAR)) {
+      varDeclaration();
+    } else {
+      expressionStatement();
+    }
+
+    var condition = if (!check(SEMICOLON)) expression() else null;
+    consume(SEMICOLON, "Expect ';' after loop condition.");
+
+    val increment = if (!check(RIGHT_PAREN)) expression() else null;
+    consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+
+    var body = statement();
+
+    if (increment != null) {
+      body = Stmt.Block(Arrays.asList(body, Stmt.Expression(increment)));
+    }
+
+    if (condition == null) condition = Expr.Literal(true);
+    body = Stmt.While(condition, body);
+
+    if (initializer != null) {
+      body = Stmt.Block(Arrays.asList(initializer, body));
+    }
+
+    return body;
+  }
+
+  private fun whileStatement(): Stmt {
+    consume(LEFT_PAREN, "Expect '(' after 'while'.");
+    val condition = expression();
+    consume(RIGHT_PAREN, "Expect ')' after condition.");
+    val body = statement();
+
+    return Stmt.While(condition, body);
+  }
+
+  private fun ifStatement(): Stmt {
+    consume(LEFT_PAREN, "Expect '(' after 'if'.");
+    val condition = expression();
+    consume(RIGHT_PAREN, "Expect ')' after if condition."); 
+
+    val thenBranch = statement();
+    var elseBranch: Stmt? = null;
+    if (match(ELSE)) {
+      elseBranch = statement();
+    }
+
+    return Stmt.If(condition, thenBranch, elseBranch);
   }
 
   private fun printStatement(): Stmt {
@@ -108,7 +178,7 @@ class Parser(val tokens: List<Token>) {
   }
 
   private fun assignment(): Expr {
-    val expr = equality();
+    val expr = or();
 
     if (match(EQUAL)) {
       val equals = previous();
@@ -120,6 +190,30 @@ class Parser(val tokens: List<Token>) {
       }
 
       error(equals, "Invalid assignment target."); 
+    }
+
+    return expr;
+  }
+
+  private fun or(): Expr {
+    var expr = and();
+
+    while (match(OR)) {
+      val operator = previous();
+      val right = and();
+      expr = Expr.Logical(expr, operator, right);
+    }
+
+    return expr;
+  }
+
+  private fun and(): Expr {
+    var expr = equality();
+
+    while (match(AND)) {
+      val operator = previous();
+      val right = equality();
+      expr = Expr.Logical(expr, operator, right);
     }
 
     return expr;
