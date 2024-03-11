@@ -8,8 +8,12 @@ import java.util.Arrays
 /**
  * Expression Grammar
    program        → declaration* EOF ;
-   declaration    → varDecl
+   declaration    → funDecl
+                  | varDecl
                   | statement ;
+   funDecl        → "fun" function ;
+   function       → IDENTIFIER "(" parameters? ")" block ;
+   parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
    varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
    statement      → exprStmt
                   | printStmt ;
@@ -19,8 +23,10 @@ import java.util.Arrays
                   | forStmt
                   | ifStmt
                   | printStmt
+                  | returnStmt
                   | whileStmt
                   | block ;
+   returnStmt     → "return" expression? ";" ;
    forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
                     expression? ";"
                     expression? ")" statement ;
@@ -36,8 +42,9 @@ import java.util.Arrays
    comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
    term           → factor ( ( "-" | "+" ) factor )* ;
    factor         → unary ( ( "/" | "*" ) unary )* ;
-   unary          → ( "!" | "-" ) unary
-                  | primary ;
+   unary          → ( "!" | "-" ) unary | call;
+   arguments      → expression ( "," expression )* ;
+   call           → primary ( "(" arguments? ")" )* ;
    primary        → NUMBER | STRING | "true" | "false" | "nil"
                   | "(" expression ")"
                   | IDENTIFIER ;
@@ -62,6 +69,7 @@ class Parser(val tokens: List<Token>) {
   }
 
   private fun declaration(): Stmt {
+    if (match(FUN)) return function("function");
     if (match(VAR)) return varDeclaration();
     return statement();
     // TODO: the null return seems weird... instead of doing Stmt? everywhere, let's see if this gets addressed
@@ -80,6 +88,7 @@ class Parser(val tokens: List<Token>) {
     if (match(FOR)) return forStatement();
     if (match(IF)) return ifStatement();
     if (match(PRINT)) return printStatement();
+    if (match(RETURN)) return returnStatement();
     if (match(WHILE)) return whileStatement();
     if (match(LEFT_BRACE)) return Stmt.Block(block());
 
@@ -148,6 +157,23 @@ class Parser(val tokens: List<Token>) {
     return Stmt.Print(value);
   }
 
+  private fun returnStatement(): Stmt {
+    val keyword = previous();
+    // TODO: hmmm
+    // var value: Expr? = null;
+    if (check(SEMICOLON)) {
+      return Stmt.Return(keyword, null)
+    }
+    
+    val value = expression();
+    // if (!check(SEMICOLON)) {
+    //   value = expression();
+    // }
+
+    consume(SEMICOLON, "Expect ';' after return value.");
+    return Stmt.Return(keyword, value);
+  }
+
   private fun varDeclaration(): Stmt {
     val name = consume(IDENTIFIER, "Expect variable name.");
 
@@ -175,6 +201,29 @@ class Parser(val tokens: List<Token>) {
 
     consume(RIGHT_BRACE, "Expect '}' after block.");
     return statements;
+  }
+
+  private fun function(kind: String): Stmt.Function {
+    val name = consume(IDENTIFIER, "Expect $kind name.");
+    consume(LEFT_PAREN, "Expect '(' after $kind name.");
+
+    val parameters = ArrayList<Token>();
+    if (!check(RIGHT_PAREN)) {
+      do {
+        if (parameters.size >= 255) {
+          error(peek(), "Can't have more than 255 parameters.");
+        }
+
+        parameters.add(
+            consume(IDENTIFIER, "Expect parameter name."));
+      } while (match(COMMA));
+    }
+    consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+    consume(LEFT_BRACE, "Expect '{' before $kind body.");
+    val body = block();
+
+    return Stmt.Function(name, parameters, body);
   }
 
   private fun assignment(): Expr {
@@ -274,7 +323,38 @@ class Parser(val tokens: List<Token>) {
       return Expr.Unary(operator, right);
     }
 
-    return primary();
+    return call();
+  }
+
+  private fun call(): Expr {
+    var expr = primary();
+
+    while (true) { 
+      if (match(LEFT_PAREN)) {
+        expr = finishCall(expr);
+      } else {
+        break;
+      }
+    }
+
+    return expr;
+  }
+
+  private fun finishCall(callee: Expr): Expr {
+    val arguments = ArrayList<Expr>();
+    if (!check(RIGHT_PAREN)) {
+      do {
+        if (arguments.size >= 255) {
+          error(peek(), "Can't have more than 255 arguments.");
+        }
+
+        arguments.add(expression());
+      } while (match(COMMA));
+    }
+
+    val paren = consume(RIGHT_PAREN, "Expect ')' after arguments.");
+
+    return Expr.Call(callee, paren, arguments);
   }
 
   @Throws(ParseError::class)

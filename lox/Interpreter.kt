@@ -3,8 +3,23 @@ package com.craftinginterpreters.lox;
 import com.craftinginterpreters.lox.TokenType.*;
 import com.craftinginterpreters.lox.RuntimeError
 
+class ClockNative : LoxCallable {
+  override fun arity(): Int { return 0; }
+
+  override fun call(interpreter: Interpreter, arguments: List<Any?>): Any? {
+    return System.currentTimeMillis() / 1000.0;
+  }
+
+  override fun toString(): String { return "<native fn>"; }
+};
+
 class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
-  private var environment = Environment();
+  final var globals = Environment();
+  private var environment = globals;
+
+  constructor() {
+    globals.define("clock", ClockNative() );
+  }
 
   fun interpret(statements: List<Stmt>) {
     try {
@@ -103,6 +118,13 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     return Unit;
   }
 
+  override fun visitFunctionStmt(stmt: Stmt.Function): Unit {
+    val function = LoxFunction(stmt, environment);
+    environment.define(stmt.name.lexeme, function);
+
+    return Unit;
+  }
+
   override fun visitIfStmt(stmt: Stmt.If): Unit {
     if (isTruthy(evaluate(stmt.condition))) {
       execute(stmt.thenBranch);
@@ -116,7 +138,15 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
   override fun visitPrintStmt(stmt: Stmt.Print): Unit {
     val value = evaluate(stmt.expression);
     System.out.println(stringify(value));
+
     return Unit;
+  }
+
+  override fun visitReturnStmt(stmt: Stmt.Return): Unit {
+    var value: Any? = null;
+    if (stmt.value != null) value = evaluate(stmt.value);
+
+    throw Return(value);
   }
 
   override fun visitVarStmt(stmt: Stmt.Var): Unit {
@@ -189,6 +219,28 @@ class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
       }
       else -> null; // what about this?
     }
+  }
+
+  
+  override fun visitCallExpr(expr: Expr.Call): Any? {
+    val callee = evaluate(expr.callee);
+
+    val arguments = ArrayList<Any?>();
+    for (argument in expr.arguments) { 
+      arguments.add(evaluate(argument));
+    }
+
+    if (!(callee is LoxCallable)) {
+      throw RuntimeError(expr.paren, "Can only call functions and classes.");
+    }
+
+    val function: LoxCallable = callee;
+
+    if (arguments.size != function.arity()) {
+      throw RuntimeError(expr.paren, "Expected ${function.arity()} arguments but got ${arguments.size}.");
+    }
+
+    return function.call(this, arguments);
   }
 
   private fun isEqual(a: Any?, b: Any?): Boolean {

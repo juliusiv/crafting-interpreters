@@ -6,8 +6,10 @@ interface Stmt {
   interface Visitor<out R> {
     fun visitBlockStmt(stmt: Stmt.Block): R;
     fun visitExpressionStmt(stmt: Stmt.Expression): R;
+    fun visitFunctionStmt(stmt: Stmt.Function): R;
     fun visitIfStmt(stmt: Stmt.If): R;
     fun visitPrintStmt(stmt: Stmt.Print): R;
+    fun visitReturnStmt(stmt: Stmt.Return): R;
     fun visitVarStmt(stmt: Stmt.Var): R;
     fun visitWhileStmt(stmt: Stmt.While): R;
   }
@@ -26,6 +28,12 @@ interface Stmt {
     }
   }
 
+  class Function(val name: Token, val  params: List<Token>, val  body: List<Stmt>) : Stmt {
+    override fun <R> accept(visitor: Visitor<R>): R {
+      return visitor.visitFunctionStmt(this);
+    }
+  }
+
   class If(val condition: Expr, val  thenBranch: Stmt, val  elseBranch: Stmt?) : Stmt {
     override fun <R> accept(visitor: Visitor<R>): R {
       return visitor.visitIfStmt(this);
@@ -35,6 +43,12 @@ interface Stmt {
   class Print(val expression: Expr) : Stmt {
     override fun <R> accept(visitor: Visitor<R>): R {
       return visitor.visitPrintStmt(this);
+    }
+  }
+
+  class Return(val keyword: Token, val  value: Expr?) : Stmt {
+    override fun <R> accept(visitor: Visitor<R>): R {
+      return visitor.visitReturnStmt(this);
     }
   }
 

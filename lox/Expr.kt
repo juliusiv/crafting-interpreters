@@ -6,6 +6,7 @@ interface Expr {
   interface Visitor<out R> {
     fun visitAssignExpr(expr: Expr.Assign): R;
     fun visitBinaryExpr(expr: Expr.Binary): R;
+    fun visitCallExpr(expr: Expr.Call): R;
     fun visitGroupingExpr(expr: Expr.Grouping): R;
     fun visitLiteralExpr(expr: Expr.Literal): R;
     fun visitLogicalExpr(expr: Expr.Logical): R;
@@ -24,6 +25,12 @@ interface Expr {
   class Binary(val left: Expr, val  operator: Token, val  right: Expr) : Expr {
     override fun <R> accept(visitor: Visitor<R>): R {
       return visitor.visitBinaryExpr(this);
+    }
+  }
+
+  class Call(val callee: Expr, val  paren: Token, val  arguments: List<Expr>) : Expr {
+    override fun <R> accept(visitor: Visitor<R>): R {
+      return visitor.visitCallExpr(this);
     }
   }
 
