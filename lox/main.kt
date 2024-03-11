@@ -76,7 +76,15 @@ fun run(source: String) {
     return;
   }
 
+  
   val interpreter = Interpreter();
+
+  val resolver = Resolver(interpreter);
+  resolver.resolve(statements);
+
+  // Stop if there was a resolution error.
+  if (hadError) return;
+
   interpreter.interpret(statements);
 
   // System.out.println(AstPrinter().print(expression) + "\n");

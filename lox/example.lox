@@ -6,12 +6,19 @@
 // for (var i = 0; i < 20; i = i + 1) {
 //   print fib(i);
 // }
-fun dude(name) {
-  fun wow() {
-    return "wow " + name + "!";
-  }
 
-  return "Dude, " + wow();
+// var a = "global";
+// {
+//   fun showA() {
+//     print a;
+//   }
+
+//   showA();
+//   var a = "block";
+//   showA();
+// }
+
+fun bad() {
+  var a = "first";
+  var a = "second";
 }
-
-print dude("Julius");
